@@ -1,4 +1,4 @@
-# dotsync
+# dotSync
 
 Manage dotfile symlinks from a dotfiles repository to your home directory.
 
