@@ -8,13 +8,16 @@ LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main
 
 .DEFAULT_GOAL := help
 
-.PHONY: build test test-race test-cover install lint vet tidy clean help completions
+.PHONY: build test test-race test-cover install lint vet tidy clean help completions sort
 
 build: ## Build the binary to ./$(BINARY)
 	go build $(LDFLAGS) -o $(BINARY) $(MAIN)
 
 install: ## Install the binary via go install
 	go install $(LDFLAGS) $(MAIN)
+
+sort: build ## Sort .dotsync.yaml entries by src and renumber IDs
+	./$(BINARY) sort
 
 test: ## Run tests
 	go test ./... -count=1

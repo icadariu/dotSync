@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -92,6 +93,15 @@ func NormalizeIDs(entries []Entry) []Entry {
 	for i := range entries {
 		entries[i].ID = i + 1
 	}
+	return entries
+}
+
+// SortEntriesBySrc sorts entries by Src ascending (case-sensitive, stable).
+// It does not modify IDs; call NormalizeIDs afterwards to renumber.
+func SortEntriesBySrc(entries []Entry) []Entry {
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].Src < entries[j].Src
+	})
 	return entries
 }
 
