@@ -10,28 +10,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```sh
 make build              # build ./dotsync with version ldflags
-make install            # go install to $GOPATH/bin
+make install            # go install to $GOPATH/bin (builds + installs in one step)
 make test               # full test suite
-make test-race          # with -race
-make test-cover         # coverage.out + go tool cover -func summary
-make vet                # go vet ./...
-make tidy               # go mod tidy + verify
-make lint               # vet + golangci-lint if installed
+make test RACE=1        # add -race
+make test COVER=1       # write coverage.out and print func summary
+make verify             # vet + tidy + lint (single static-check sweep)
 make clean
 make help               # list all annotated targets
 
 # Run one test (no make wrapper):
-go test ./internal/config -run TestConfig_NormalizeIDs -v
-go test ./cmd/dotsync    -run TestE2E_AddAndList      -v
+go test ./internal/config -run TestConfig_SortEntriesBySrc -v
+go test ./cmd/dotsync    -run TestE2E_Sort                -v
 ```
+
+`test-race`, `test-cover`, `vet`, `tidy`, `lint` are still individually callable but intentionally hidden from `make help`.
 
 ## Big picture
 
 The codebase is two layers:
 
-- **`cmd/dotsync/*.go`** — one file per cobra subcommand (`add`, `delete`, `edit`, `list`, `plan`, `apply`, `version`, `completion`, …). Each command auto-registers itself in an `init()` that calls `rootCmd.AddCommand(...)`. To add a subcommand, drop a new file in this directory following the same pattern; no central registry to edit.
+- **`cmd/dotsync/*.go`** — one file per cobra subcommand (`add`, `delete`, `edit`, `list`, `plan`, `apply`, `sort`, `version`, `completion`, …). Each command auto-registers itself in an `init()` that calls `rootCmd.AddCommand(...)`. To add a subcommand, drop a new file in this directory following the same pattern; no central registry to edit.
 - **`internal/`** — pure logic, no cobra:
-  - `config` — `Config`/`Entry` structs, `Load`/`Save`, path resolution (`ResolveSrcPath`, `ResolveDstPath`, `expandHome`), `NormalizeIDs`. Stored `src`/`dst` are always absolute on disk; `$HOME` / `~/` are still expanded on read for back-compat.
+  - `config` — `Config`/`Entry` structs, `Load`/`Save`, path resolution (`ResolveSrcPath`, `ResolveDstPath`, `expandHome`), `NormalizeIDs`, `SortEntriesBySrc`. Stored `src`/`dst` are always absolute on disk; `$HOME` / `~/` are still expanded on read for back-compat.
   - `linker` — the reconciliation engine. Classifies each entry into a `Status` (`StatusOK`, `StatusLink`, `StatusRelink`, `StatusConflict`, `StatusError`). Both `plan` and `apply` are thin shells around this — change behavior here, not in the cobra files.
   - `diff` — unified diff used by `plan`'s output for `~ replace` conflicts.
   - `color` — ANSI color helpers; respects `NO_COLOR`.
@@ -44,7 +44,7 @@ In every command, use `cfgPath()` from `cmd/dotsync/main.go` — it resolves in 
 
 ### Version
 
-`version`, `commit`, and `buildDate` are package-level `var`s in `cmd/dotsync/version.go`, injected by the Makefile via `-ldflags "-X main.version=... -X main.commit=... -X main.buildDate=..."`. The same string is printed by `dotsync version` and `dotsync --version`. If you add a new var, wire it through the Makefile's `LDFLAGS` too.
+`version`, `commit`, and `buildTime` are package-level `var`s in `cmd/dotsync/version.go`, injected by the Makefile via `-ldflags "-X main.version=... -X main.commit=... -X main.buildTime=..."`. Format: `dotsync <git-describe> (built YY-MM-DD_HH:MM, commit <sha>)`. The same string is printed by `dotsync version` and `dotsync --version`. If you add a new var, wire it through the Makefile's `LDFLAGS` too.
 
 ## Test sandboxing — read this before writing tests
 
@@ -58,7 +58,7 @@ E2E tests live in `cmd/dotsync/e2e_test.go` and drive `rootCmd.SetArgs(...) + ro
 
 ## Conventions worth knowing
 
-- `Entry.ID` is assigned automatically and renumbered to `1..N` after `add`/`delete` via `config.NormalizeIDs` — don't rely on stable IDs.
+- `Entry.ID` is assigned automatically and renumbered to `1..N` after `add`/`delete` via `config.NormalizeIDs` — don't rely on stable IDs. `dotsync sort` exposes the same renumber pass to the user (it sorts by `Src` first, then calls `NormalizeIDs`).
 - `apply` backs up displaced files with a collision-safe suffix (`.bk`, `.bk.1`, `.bk.2`, …) unless `--no-backup` is given.
 - `delete` uses `os.Remove` only on `dst` if it's a symlink — real files/directories are left in place.
 - `plan` output is git/chezmoi style; the prefixes (`= unchanged`, `+ create`, `~ relink`, `~ replace`, `! error`) come from `Status.String()` in `internal/linker`.
