@@ -50,6 +50,68 @@ func TestConfig_NormalizeIDs(t *testing.T) {
 	}
 }
 
+func TestConfig_SortEntriesBySrc(t *testing.T) {
+	t.Run("already sorted is unchanged", func(t *testing.T) {
+		entries := []config.Entry{
+			{ID: 1, Src: "/a"},
+			{ID: 2, Src: "/b"},
+			{ID: 3, Src: "/c"},
+		}
+		got := config.SortEntriesBySrc(entries)
+		for i, want := range []string{"/a", "/b", "/c"} {
+			if got[i].Src != want {
+				t.Errorf("got[%d].Src = %q, want %q", i, got[i].Src, want)
+			}
+		}
+	})
+
+	t.Run("reverse becomes ascending", func(t *testing.T) {
+		entries := []config.Entry{
+			{ID: 1, Src: "/c"},
+			{ID: 2, Src: "/b"},
+			{ID: 3, Src: "/a"},
+		}
+		got := config.SortEntriesBySrc(entries)
+		for i, want := range []string{"/a", "/b", "/c"} {
+			if got[i].Src != want {
+				t.Errorf("got[%d].Src = %q, want %q", i, got[i].Src, want)
+			}
+		}
+	})
+
+	t.Run("empty and single do not panic", func(t *testing.T) {
+		_ = config.SortEntriesBySrc(nil)
+		_ = config.SortEntriesBySrc([]config.Entry{})
+		got := config.SortEntriesBySrc([]config.Entry{{ID: 7, Src: "/x"}})
+		if len(got) != 1 || got[0].Src != "/x" {
+			t.Errorf("single-entry sort altered slice: %+v", got)
+		}
+	})
+
+	t.Run("case-sensitive (uppercase before lowercase)", func(t *testing.T) {
+		entries := []config.Entry{
+			{ID: 1, Src: "/home/a"},
+			{ID: 2, Src: "/home/A"},
+		}
+		got := config.SortEntriesBySrc(entries)
+		if got[0].Src != "/home/A" || got[1].Src != "/home/a" {
+			t.Errorf("case-sensitive order broken: %+v", got)
+		}
+	})
+
+	t.Run("stable when src is equal", func(t *testing.T) {
+		// Two entries with identical Src — original relative order must hold.
+		entries := []config.Entry{
+			{ID: 10, Src: "/same", Dst: "/dst-first"},
+			{ID: 20, Src: "/same", Dst: "/dst-second"},
+		}
+		got := config.SortEntriesBySrc(entries)
+		if got[0].Dst != "/dst-first" || got[1].Dst != "/dst-second" {
+			t.Errorf("stability broken: %+v", got)
+		}
+	})
+}
+
 func TestConfig_RoundTrip(t *testing.T) {
 	dir := testenv.NextTestDir()
 	path := filepath.Join(dir, ".dotsync.yaml")
