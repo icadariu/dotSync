@@ -812,6 +812,106 @@ func TestE2E_Apply_NoBackup_Conflict(t *testing.T) {
 	env.AssertNotExist(t, ".zshrc.bk")
 }
 
+// TestE2E_Sort verifies `dotsync sort` reorders entries by Src ascending and
+// renumbers IDs to 1..N. Simulates a hand-edited config with out-of-order
+// entries and gappy IDs (2, 4, 9).
+func TestE2E_Sort(t *testing.T) {
+	env := testenv.New(t)
+	t.Setenv("DOTSYNC_CONFIG", env.ConfigPath)
+
+	srcA := filepath.Join(env.RepoDir, "a/.aaa")
+	srcB := filepath.Join(env.RepoDir, "b/.bbb")
+	srcC := filepath.Join(env.RepoDir, "c/.ccc")
+	env.WriteConfig([]config.Entry{
+		{ID: 9, Src: srcC, Dst: filepath.Join(env.HomeDir, ".ccc")},
+		{ID: 2, Src: srcA, Dst: filepath.Join(env.HomeDir, ".aaa")},
+		{ID: 4, Src: srcB, Dst: filepath.Join(env.HomeDir, ".bbb")},
+	})
+
+	rootCmd.SetArgs([]string{"sort"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("sort: %v", err)
+	}
+
+	cfg, err := config.Load(env.ConfigPath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	wantSrcs := []string{srcA, srcB, srcC}
+	if len(cfg.Entries) != len(wantSrcs) {
+		t.Fatalf("got %d entries, want %d", len(cfg.Entries), len(wantSrcs))
+	}
+	for i, want := range wantSrcs {
+		if cfg.Entries[i].Src != want {
+			t.Errorf("Entries[%d].Src = %q, want %q", i, cfg.Entries[i].Src, want)
+		}
+		if cfg.Entries[i].ID != i+1 {
+			t.Errorf("Entries[%d].ID = %d, want %d", i, cfg.Entries[i].ID, i+1)
+		}
+	}
+}
+
+// TestE2E_Sort_NoChanges asserts that `dotsync sort` on an already
+// sorted+normalized config prints "no changes" and does not bump mtime.
+func TestE2E_Sort_NoChanges(t *testing.T) {
+	env := testenv.New(t)
+	t.Setenv("DOTSYNC_CONFIG", env.ConfigPath)
+
+	env.WriteConfig([]config.Entry{
+		{ID: 1, Src: filepath.Join(env.RepoDir, "a"), Dst: filepath.Join(env.HomeDir, ".a")},
+		{ID: 2, Src: filepath.Join(env.RepoDir, "b"), Dst: filepath.Join(env.HomeDir, ".b")},
+	})
+
+	info1, err := os.Stat(env.ConfigPath)
+	if err != nil {
+		t.Fatalf("Stat: %v", err)
+	}
+
+	out := captureStdout(func() {
+		rootCmd.SetArgs([]string{"sort"})
+		_ = rootCmd.Execute()
+	})
+	if !strings.Contains(out, "no changes") {
+		t.Errorf("expected 'no changes' in output, got: %q", out)
+	}
+
+	info2, err := os.Stat(env.ConfigPath)
+	if err != nil {
+		t.Fatalf("Stat (after): %v", err)
+	}
+	if !info1.ModTime().Equal(info2.ModTime()) {
+		t.Errorf("mtime changed for no-op sort: %v -> %v", info1.ModTime(), info2.ModTime())
+	}
+}
+
+// TestE2E_Sort_RespectsDOTSYNC_CONFIG ensures the override path is the one
+// modified (sandbox isolation).
+func TestE2E_Sort_RespectsDOTSYNC_CONFIG(t *testing.T) {
+	env := testenv.New(t)
+	t.Setenv("DOTSYNC_CONFIG", env.ConfigPath)
+
+	env.WriteConfig([]config.Entry{
+		{ID: 5, Src: filepath.Join(env.RepoDir, "z"), Dst: filepath.Join(env.HomeDir, ".z")},
+		{ID: 1, Src: filepath.Join(env.RepoDir, "a"), Dst: filepath.Join(env.HomeDir, ".a")},
+	})
+
+	rootCmd.SetArgs([]string{"sort"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("sort: %v", err)
+	}
+
+	if _, err := os.Stat(env.ConfigPath); err != nil {
+		t.Fatalf("sandbox config missing after sort: %v", err)
+	}
+	cfg, err := config.Load(env.ConfigPath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Entries[0].ID != 1 || cfg.Entries[1].ID != 2 {
+		t.Errorf("IDs not renumbered: %+v", cfg.Entries)
+	}
+}
+
 // TestE2E_Apply_NoBackup_Relink verifies --no-backup removes the wrong-target
 // symlink instead of renaming it to a .bk file.
 func TestE2E_Apply_NoBackup_Relink(t *testing.T) {
