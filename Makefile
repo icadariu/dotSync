@@ -8,7 +8,7 @@ LDFLAGS   := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X ma
 
 .DEFAULT_GOAL := help
 
-.PHONY: build install test test-race test-cover verify vet tidy lint version clean completions help
+.PHONY: build install test test-race test-cover verify vet tidy lint clean completions help
 
 build: ## Build the binary to ./$(BINARY)
 	go build $(LDFLAGS) -o $(BINARY) $(MAIN)
@@ -45,9 +45,6 @@ tidy:
 
 lint: vet
 	@which golangci-lint > /dev/null 2>&1 && golangci-lint run || true
-
-version: ## Print the version string that will be baked into the binary
-	@echo "$(BINARY) $(VERSION) (built $(BUILDTIME), commit $(COMMIT))"
 
 clean: ## Remove build artifacts
 	rm -f $(BINARY) coverage.out
