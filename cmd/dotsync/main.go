@@ -44,6 +44,9 @@ func cfgPath() string {
 }
 
 func main() {
+	if HandleVersionFlag() {
+		return
+	}
 	if err := rootCmd.Execute(); err != nil {
 		var ee exitErr
 		if errors.As(err, &ee) {
