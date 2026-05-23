@@ -8,7 +8,7 @@ LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main
 
 .DEFAULT_GOAL := help
 
-.PHONY: build test test-race test-cover install lint vet tidy clean help
+.PHONY: build test test-race test-cover install lint vet tidy clean help completions
 
 build: ## Build the binary to ./$(BINARY)
 	go build $(LDFLAGS) -o $(BINARY) $(MAIN)
@@ -38,6 +38,12 @@ tidy: ## Tidy and verify go.mod / go.sum
 
 clean: ## Remove build artifacts
 	rm -f $(BINARY) coverage.out
+
+completions: ## Enable Makefile target autocompletion for zsh
+	@echo 'Adding zsh completion for make...'
+	@grep -qxF 'zstyle ":completion:*:make:*" tag-order "targets"' ~/.zshrc 2>/dev/null \
+		|| echo 'zstyle ":completion:*:make:*" tag-order "targets"' >> ~/.zshrc
+	@echo 'Done. Run "source ~/.zshrc" or restart your shell to activate.'
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) \
