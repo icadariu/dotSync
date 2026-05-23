@@ -1,40 +1,50 @@
-BINARY  := dotsync
-MAIN    := ./cmd/dotsync
-MODULE  := $(shell go list -m)
-VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")$(shell git diff --quiet HEAD 2>/dev/null || echo "-dirty")
-DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.buildDate=$(DATE)"
+BINARY    := dotsync
+MAIN      := ./cmd/dotsync
+MODULE    := $(shell go list -m)
+VERSION   := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT    := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILDTIME := $(shell date +%y-%m-%d_%H:%M)
+LDFLAGS   := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.buildTime=$(BUILDTIME)"
 
 .DEFAULT_GOAL := help
 
-.PHONY: build test test-race test-cover install lint vet tidy clean help completions
+.PHONY: build install test test-race test-cover verify vet tidy lint clean completions help
 
 build: ## Build the binary to ./$(BINARY)
 	go build $(LDFLAGS) -o $(BINARY) $(MAIN)
 
-install: ## Install the binary via go install
+install: ## Build and install the binary to $$GOPATH/bin
 	go install $(LDFLAGS) $(MAIN)
 
-test: ## Run tests
-	go test ./... -count=1
+# Single test entry point. Opt in via env:
+#   make test RACE=1   -> race detector
+#   make test COVER=1  -> coverage report
+test: ## Run tests (set RACE=1 or COVER=1 to opt in)
+	@flags="-count=1"; \
+	if [ "$(RACE)" = "1" ]; then flags="$$flags -race"; fi; \
+	if [ "$(COVER)" = "1" ]; then flags="$$flags -coverprofile=coverage.out"; fi; \
+	go test ./... $$flags
+	@if [ "$(COVER)" = "1" ]; then go tool cover -func=coverage.out; fi
 
-test-race: ## Run tests with race detector
-	go test -race ./... -count=1
+# Hidden compatibility aliases (kept but not advertised in `make help`).
+test-race:
+	@$(MAKE) --no-print-directory test RACE=1
 
-test-cover: ## Run tests with coverage report
-	go test ./... -count=1 -coverprofile=coverage.out
-	go tool cover -func=coverage.out
+test-cover:
+	@$(MAKE) --no-print-directory test COVER=1
 
-lint: vet ## Run go vet (add golangci-lint here if available)
-	@which golangci-lint > /dev/null 2>&1 && golangci-lint run || true
+verify: vet tidy lint ## Run vet, tidy and lint (full static-check sweep)
 
-vet: ## Run go vet
+# Hidden individual checks (callable but not shown in help).
+vet:
 	go vet ./...
 
-tidy: ## Tidy and verify go.mod / go.sum
+tidy:
 	go mod tidy
 	go mod verify
+
+lint: vet
+	@which golangci-lint > /dev/null 2>&1 && golangci-lint run || true
 
 clean: ## Remove build artifacts
 	rm -f $(BINARY) coverage.out
