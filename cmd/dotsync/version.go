@@ -9,11 +9,11 @@ import (
 var (
 	version   = "dev"
 	commit    = "unknown"
-	buildDate = "unknown"
+	buildTime = "unknown"
 )
 
 func versionString() string {
-	return fmt.Sprintf("dotsync %s (commit %s, built %s)\n", version, commit, buildDate)
+	return fmt.Sprintf("dotsync %s (built %s, commit %s)\n", version, buildTime, commit)
 }
 
 var versionCmd = &cobra.Command{
