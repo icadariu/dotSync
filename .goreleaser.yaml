@@ -1,0 +1,53 @@
+# Canonical GoReleaser config. Copy verbatim to the repo root as .goreleaser.yaml
+# and change only the two lines marked ADJUST. Pair with release.yml (CI) and
+# the release target in Makefile.fragment. Version injection matches
+# go_version_template: --version prints "<tag> (built DD-Mon-YYYY_HH:MM, commit <sha>)".
+version: 2
+
+project_name: dotsync
+
+builds:
+  - main: ./cmd/dotsync
+    binary: "{{ .ProjectName }}"
+    env:
+      - CGO_ENABLED=0
+    # add windows only if the app supports it
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Tag }} -X main.commit={{ .ShortCommit }} -X main.buildTime={{ .Now.UTC.Format "02-Jan-2006_15:04" }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE*
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+# The GitHub release notes are the changelog: grouped Conventional Commit
+# subjects since the previous tag.
+changelog:
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - '^(docs|test|ci|chore|build|style)(\(.+\))?!?:'
+      - '^Merge '
+  groups:
+    - title: Breaking changes
+      regexp: '^\w+(\(.+\))?!:'
+      order: 0
+    - title: Features
+      regexp: '^feat(\(.+\))?:'
+      order: 1
+    - title: Bug fixes
+      regexp: '^fix(\(.+\))?:'
+      order: 2
+    - title: Other
+      order: 999

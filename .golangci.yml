@@ -1,0 +1,7 @@
+version: "2"
+linters:
+  exclusions:
+    # Deliberately ignored errors (deferred Close/Remove, fmt.Fprint into a
+    # tabwriter whose Flush error is returned); the v1 default exclusions.
+    presets:
+      - std-error-handling
