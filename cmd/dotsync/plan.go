@@ -30,6 +30,10 @@ func init() {
 	rootCmd.AddCommand(planCmd)
 	planCmd.Flags().BoolVarP(&planVerbose, "verbose", "v", false, "show unchanged entries")
 	planCmd.Flags().BoolVar(&planNoPager, "no-pager", false, "do not pipe output through a pager")
+	flagExample(planCmd.Flags(), "verbose",
+		"  # also show unchanged entries\n  dotsync plan --verbose")
+	flagExample(planCmd.Flags(), "no-pager",
+		"  # print straight to the terminal, e.g. for scripts\n  dotsync plan --no-pager")
 }
 
 func runPlan(_ *cobra.Command, args []string) error {

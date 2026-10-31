@@ -28,6 +28,8 @@ var deleteForce bool
 func init() {
 	rootCmd.AddCommand(deleteCmd)
 	deleteCmd.Flags().BoolVar(&deleteForce, "force", false, "skip confirmation prompt")
+	flagExample(deleteCmd.Flags(), "force",
+		"  # delete entry 3 without the confirmation prompt\n  dotsync delete --force 3")
 }
 
 func runDelete(_ *cobra.Command, args []string) error {

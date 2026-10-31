@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/icadariu/dotSync/internal/config"
 	"github.com/icadariu/dotSync/internal/diff"
@@ -56,7 +58,34 @@ func rootGuard(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
+const exampleAnnotation = "dotsync_example"
+
+// flagExample attaches help examples to a flag; --help shows them, filtered to the flags passed.
+func flagExample(fs *pflag.FlagSet, name string, ex ...string) {
+	_ = fs.SetAnnotation(name, exampleAnnotation, ex)
+}
+
 func init() {
+	defaultHelp := rootCmd.HelpFunc()
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		var all, picked []string
+		cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			ex := f.Annotations[exampleAnnotation]
+			all = append(all, ex...)
+			if f.Changed {
+				picked = append(picked, ex...)
+			}
+		})
+		if len(picked) == 0 {
+			picked = all
+		}
+		base := cmd.Example
+		if len(picked) > 0 {
+			cmd.Example = strings.Join(picked, "\n\n")
+		}
+		defaultHelp(cmd, args)
+		cmd.Example = base
+	})
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "", "config file path (default ~/.dotsync.yaml, env: DOTSYNC_CONFIG)")
 }
 

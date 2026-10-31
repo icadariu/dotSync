@@ -2780,3 +2780,44 @@ func TestE2E_Apply_ConflictBackupAppearsDuringPrompt(t *testing.T) {
 		t.Errorf("stderr should tell the user to re-run apply, got: %q", stderr)
 	}
 }
+
+// TestE2E_HelpExamples verifies that --help shows per-flag examples, filtered
+// to the flags passed alongside --help (issue #4).
+func TestE2E_HelpExamples(t *testing.T) {
+	cases := []struct {
+		name    string
+		args    []string
+		want    []string
+		notWant []string
+	}{
+		{"add all", []string{"add", "--help"}, []string{"Examples:", "dotsync add --src", "dotsync add --adopt", "dotsync add --force"}, nil},
+		{"add adopt only", []string{"add", "--adopt", "--help"}, []string{"Examples:", "dotsync add --adopt"}, []string{"dotsync add --src", "dotsync add --force"}},
+		{"add adopt and force", []string{"add", "--adopt", "--force", "--help"}, []string{"dotsync add --adopt", "dotsync add --force"}, []string{"dotsync add --src"}},
+		{"apply no-backup only", []string{"apply", "--no-backup", "--help"}, []string{"dotsync apply --no-backup"}, []string{"dotsync apply --force"}},
+		{"plan all", []string{"plan", "--help"}, []string{"dotsync plan --verbose", "dotsync plan --no-pager"}, nil},
+		{"unlink all", []string{"unlink", "--help"}, []string{"dotsync unlink --force", "dotsync unlink --restore"}, nil},
+		{"delete all", []string{"delete", "--help"}, []string{"dotsync delete --force"}, nil},
+		{"list has none", []string{"list", "--help"}, nil, []string{"Examples:"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testenv.New(t)
+			out := captureStdout(func() {
+				rootCmd.SetArgs(tc.args)
+				if err := rootCmd.Execute(); err != nil {
+					t.Fatalf("%v: %v", tc.args, err)
+				}
+			})
+			for _, w := range tc.want {
+				if !strings.Contains(out, w) {
+					t.Errorf("%v: missing %q in:\n%s", tc.args, w, out)
+				}
+			}
+			for _, nw := range tc.notWant {
+				if strings.Contains(out, nw) {
+					t.Errorf("%v: unexpected %q in:\n%s", tc.args, nw, out)
+				}
+			}
+		})
+	}
+}
