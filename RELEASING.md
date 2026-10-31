@@ -1,27 +1,44 @@
 # Releasing
 
-A release is a signed `vX.Y.Z` tag pushed from `main`. The `release` workflow
-then builds the binaries with GoReleaser and publishes the GitHub release:
-linux and darwin archives for amd64 and arm64, a `checksums.txt`, and (on
-public repos) a build provenance attestation.
+A release is a `vX.Y.Z` tag on `main`. Every PR merged since the previous tag
+goes into that one release. The `release` workflow builds the binaries with
+GoReleaser and publishes the GitHub release: linux and darwin archives for
+amd64 and arm64, a `checksums.txt`, and (on public repos) a build provenance
+attestation.
 
-## Steps
+Versions follow [SemVer](https://semver.org) from the Conventional Commit
+subjects since the previous tag: `fix` (and anything else) bumps the patch,
+`feat` the minor, a breaking change (`type!:` or a `BREAKING CHANGE` footer)
+the major. While the major version is `0`, a breaking change bumps the minor.
 
-1. Pick the version with [SemVer](https://semver.org): `fix` commits bump the
-   patch, `feat` commits the minor, breaking changes (`!`) the major. While the
-   major version is `0`, a breaking change bumps the minor.
-2. On an up-to-date `main` with a clean tree, run:
+## Release from GitHub (the usual way)
 
-   ```sh
-   make release TAG=vX.Y.Z
-   ```
+1. Actions -> **release** -> **Run workflow** on `main`, with `dry_run` ticked
+   (the default). The run summary shows the next version and every commit that
+   goes into it. `bump` overrides the computed bump if needed.
+2. Run it again with `dry_run` unticked. It tests `main`, tags it with the
+   computed version and publishes the release in the same run.
 
-   It refuses unless the tag is SemVer, you are on `main` in sync with
-   `origin/main`, the tree is clean and the tag is new; then it runs the tests,
-   creates a signed annotated tag and pushes it.
-3. Watch the build: `gh run watch $(gh run list -w release -L1 --json databaseId -q '.[0].databaseId')`.
-4. Check the result: `gh release view vX.Y.Z`. On a public repo, verify an
-   archive with `gh attestation verify <archive> -R <owner>/<repo>`.
+From a terminal: `gh workflow run release -f dry_run=false` (add `-f bump=minor`
+to override), then `gh run watch`.
+
+## Release from a terminal (signed tag)
+
+On an up-to-date `main` with a clean tree:
+
+```sh
+.github/next-version.sh    # prints the next version
+make release TAG=vX.Y.Z
+```
+
+`make release` refuses unless the tag is SemVer, you are on `main` in sync with
+`origin/main`, the tree is clean and the tag is new; then it runs the tests,
+creates a signed annotated tag and pushes it, which starts the same workflow.
+
+## Check the result
+
+`gh release view vX.Y.Z`. On a public repo, verify an archive with
+`gh attestation verify <archive> -R <owner>/<repo>`.
 
 ## Changelog
 

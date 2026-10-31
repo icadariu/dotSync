@@ -1,37 +1,85 @@
-# Canonical release workflow. Copy verbatim to .github/workflows/release.yml.
-# Runs only on pushed v* tags (signed, via `make release TAG=vX.Y.Z`), so pull
-# requests can never reach the write permissions below.
+# Canonical release workflow. Copy verbatim to .github/workflows/release.yml,
+# with next-version.sh at .github/next-version.sh. Two ways in:
+# - a pushed signed v* tag (`make release TAG=vX.Y.Z`);
+# - Actions -> release -> Run workflow on main: computes the next version from
+#   the Conventional Commits since the last tag, then (unless dry_run) tags
+#   main and publishes in the same run. A tag created with GITHUB_TOKEN does
+#   not start another workflow run, so nothing is released twice.
+# Pull requests can never reach the write permissions below.
 name: release
 
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump (auto reads feat/fix/! from commit subjects)
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+      dry_run:
+        description: Only show the next version and what goes into it
+        type: boolean
+        default: true
 
 permissions: {}
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
+    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
-      contents: write     # create the release and upload assets
+      contents: write     # create the tag and the release, upload assets
       id-token: write     # sign the provenance attestation
       attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          fetch-depth: 0  # release notes need the previous tag
+          fetch-depth: 0  # version and release notes need the previous tag
           persist-credentials: false
 
+      - name: Next version
+        if: github.event_name == 'workflow_dispatch'
+        id: next
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)
+          next=$(bash .github/next-version.sh "$BUMP")
+          echo "tag=$next" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Next release: $next (previous: ${last:-none})"
+            echo
+            git log --format='- %s' "${last:+$last..}HEAD"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Set up Go
+        if: github.event_name == 'push' || !inputs.dry_run
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
           go-version-file: go.mod
 
       - name: Test
+        if: github.event_name == 'push' || !inputs.dry_run
         run: go test -count=1 ./...
 
+      - name: Create tag
+        if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.next.outputs.tag }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA" >/dev/null
+          git tag "$TAG" "$GITHUB_SHA"
+
       - name: GoReleaser
+        if: github.event_name == 'push' || !inputs.dry_run
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de  # v7.3.0
         with:
           distribution: goreleaser
@@ -42,7 +90,7 @@ jobs:
 
       # Artifact attestations are free on public repos only; skipped while private.
       - name: Attest build provenance
-        if: ${{ !github.event.repository.private }}
+        if: (github.event_name == 'push' || !inputs.dry_run) && !github.event.repository.private
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
         with:
           subject-path: dist/*.tar.gz
