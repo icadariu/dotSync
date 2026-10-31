@@ -35,3 +35,8 @@ and `style` commits are left out. Write commit subjects with that in mind.
 Tags matching `v*` are protected (signed, no deletion, no force-push), so a bad
 tag is never moved or reused. Fix the problem on `main` and release the next
 patch version.
+
+Releases are immutable: once a release is published, GitHub reserves its tag
+name permanently, even if the release is deleted or the repository is deleted
+and recreated under the same name. A version number is never reused; pick the
+next one instead.
