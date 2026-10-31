@@ -27,13 +27,15 @@ to override), then `gh run watch`.
 On an up-to-date `main` with a clean tree:
 
 ```sh
-.github/next-version.sh    # prints the next version
-make release TAG=vX.Y.Z
+make release               # tags the next version, after asking [y/N]
+make release TAG=vX.Y.Z    # or pick the version yourself, no prompt
 ```
 
-`make release` refuses unless the tag is SemVer, you are on `main` in sync with
-`origin/main`, the tree is clean and the tag is new; then it runs the tests,
-creates a signed annotated tag and pushes it, which starts the same workflow.
+Without `TAG`, `make release` fetches the tags and computes the next version
+with `.github/next-version.sh`, then asks before tagging. It refuses unless the
+tag is SemVer, you are on `main` in sync with `origin/main`, the tree is clean
+and the tag is new; then it runs the tests, creates a signed annotated tag and
+pushes it, which starts the same workflow.
 
 ## Check the result
 
