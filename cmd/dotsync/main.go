@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -134,13 +135,47 @@ func selectEntries(entries []config.Entry, args []string) ([]config.Entry, error
 }
 
 func main() {
-	if HandleVersionFlag() {
+	if HandleVersionFlag() || handleHelpFlag(os.Args[1:]) {
 		return
 	}
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, errorLine(err))
 		os.Exit(1)
 	}
+}
+
+// handleHelpFlag serves --help/-h before cobra parses flags, so a value-taking
+// flag right before it (add --src --help) cannot swallow it as its value. Every
+// flag named in args is marked Changed, which the help func uses to pick examples.
+func handleHelpFlag(args []string) bool {
+	if i := slices.Index(args, "--"); i >= 0 {
+		args = args[:i]
+	}
+	if !slices.Contains(args, "--help") && !slices.Contains(args, "-h") {
+		return false
+	}
+	cmd, _, err := rootCmd.Find(args)
+	if err != nil {
+		cmd = rootCmd
+	}
+	fs := cmd.Flags()
+	for _, a := range args {
+		switch {
+		case strings.HasPrefix(a, "--"):
+			name, _, _ := strings.Cut(a[2:], "=")
+			if f := fs.Lookup(name); f != nil {
+				f.Changed = true
+			}
+		case strings.HasPrefix(a, "-") && len(a) > 1:
+			for _, c := range a[1:] {
+				if f := fs.ShorthandLookup(string(c)); f != nil {
+					f.Changed = true
+				}
+			}
+		}
+	}
+	_ = cmd.Help()
+	return true
 }
 
 // errorLine is how main prints a failed command; errors embed config paths,

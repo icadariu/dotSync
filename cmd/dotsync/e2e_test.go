@@ -2821,3 +2821,43 @@ func TestE2E_HelpExamples(t *testing.T) {
 		})
 	}
 }
+
+// TestHandleHelpFlag verifies that --help/-h works after any flag, including a
+// value-taking one that would otherwise swallow it (issue #4).
+func TestHandleHelpFlag(t *testing.T) {
+	cases := []struct {
+		name    string
+		args    []string
+		handled bool
+		want    []string
+		notWant []string
+	}{
+		{"value flag swallows help", []string{"add", "--src", "--help"}, true, []string{"dotsync add --src"}, []string{"dotsync add --adopt", "dotsync add --force"}},
+		{"short -h as value", []string{"add", "--src", "x", "--dest", "-h"}, true, []string{"dotsync add --src", "dotsync add ~/dotfiles/nvim --dest"}, []string{"dotsync add --adopt"}},
+		{"flag=value form", []string{"add", "--adopt=true", "--help"}, true, []string{"dotsync add --adopt"}, []string{"dotsync add --src"}},
+		{"shorthand flag", []string{"plan", "-v", "--help"}, true, []string{"dotsync plan --verbose"}, []string{"dotsync plan --no-pager"}},
+		{"root help has no examples", []string{"--help"}, true, []string{"Usage:", "Available Commands:"}, []string{"Examples:"}},
+		{"help after -- is an argument", []string{"add", "--", "--help"}, false, nil, nil},
+		{"no help", []string{"add", "a", "b"}, false, nil, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testenv.New(t)
+			var handled bool
+			out := captureStdout(func() { handled = handleHelpFlag(tc.args) })
+			if handled != tc.handled {
+				t.Fatalf("%v: handled = %v, want %v", tc.args, handled, tc.handled)
+			}
+			for _, w := range tc.want {
+				if !strings.Contains(out, w) {
+					t.Errorf("%v: missing %q in:\n%s", tc.args, w, out)
+				}
+			}
+			for _, nw := range tc.notWant {
+				if strings.Contains(out, nw) {
+					t.Errorf("%v: unexpected %q in:\n%s", tc.args, nw, out)
+				}
+			}
+		})
+	}
+}
