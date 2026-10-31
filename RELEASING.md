@@ -28,11 +28,13 @@ On an up-to-date `main` with a clean tree:
 
 ```sh
 make release               # tags the next version, after asking [y/N]
+make release BUMP=patch    # force the bump (patch, minor or major), still asks
 make release TAG=vX.Y.Z    # or pick the version yourself, no prompt
 ```
 
 Without `TAG`, `make release` fetches the tags and computes the next version
-with `.github/next-version.sh`, then asks before tagging. It refuses unless the
+with `.github/next-version.sh` (auto bump from the commits, unless `BUMP` is
+given), then asks before tagging. It refuses unless the
 tag is SemVer, you are on `main` in sync with `origin/main`, the tree is clean
 and the tag is new; then it runs the tests, creates a signed annotated tag and
 pushes it, which starts the same workflow.

@@ -61,14 +61,15 @@ lint: vet
 	@which golangci-lint > /dev/null 2>&1 || { echo "golangci-lint not found; install: https://golangci-lint.run/welcome/install/" >&2; exit 1; }
 	golangci-lint run
 
-release: ## Tag and push a signed release: make release [TAG=vX.Y.Z] (default: next version, asks first)
+release: ## Tag and push a signed release: make release [TAG=vX.Y.Z | BUMP=patch|minor|major] (default: auto bump, asks first)
+	@[ -z "$(TAG)" ] || [ -z "$(BUMP)" ] || { echo "use TAG or BUMP, not both"; exit 1; }
 	@test "$$(git rev-parse --abbrev-ref HEAD)" = main || { echo "release from main only"; exit 1; }
 	@test -z "$$(git status --porcelain)" || { echo "working tree is not clean"; exit 1; }
 	@git fetch -q origin main --tags
 	@test "$$(git rev-parse HEAD)" = "$$(git rev-parse origin/main)" || { echo "main is not in sync with origin/main"; exit 1; }
 	@# The default tag is computed here, after the fetch, so stale local tags cannot pick a taken version.
 	@if [ -n "$(TAG)" ]; then $(MAKE) --no-print-directory _release TAG='$(TAG)'; else \
-		tag=$$(bash .github/next-version.sh) || exit 1; \
+		tag=$$(bash .github/next-version.sh '$(BUMP)') || exit 1; \
 		printf 'next version: %s (since %s). Tag and push? [y/N] ' "$$tag" "$$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo 'the first commit')"; \
 		read -r ans || ans=; case "$$ans" in y|Y) ;; *) echo "aborted"; exit 1 ;; esac; \
 		$(MAKE) --no-print-directory _release TAG=$$tag; \
