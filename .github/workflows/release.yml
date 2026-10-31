@@ -1,6 +1,6 @@
-# Canonical release workflow. Copy verbatim to .github/workflows/release.yml,
-# with next-version.sh at .github/next-version.sh. Two ways in:
-# - a pushed signed v* tag (`make release TAG=vX.Y.Z`);
+# Managed by github-utils templates from ai-setup (config/claude/user_scripts/go_release_template).
+# Edit it there, not in this repo. Two ways in:
+# - a pushed signed v* tag (`make release`);
 # - Actions -> release -> Run workflow on main: computes the next version from
 #   the Conventional Commits since the last tag, then (unless dry_run) tags
 #   main and publishes in the same run. A tag created with GITHUB_TOKEN does
