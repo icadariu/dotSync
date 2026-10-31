@@ -13,8 +13,16 @@ import (
 )
 
 var unlinkCmd = &cobra.Command{
-	Use:               "unlink [id...]",
-	Short:             "Remove managed symlinks (optionally restore backups)",
+	Use:   "unlink [id...]",
+	Short: "Remove managed symlinks (optionally restore backups)",
+	Example: `  # remove every managed symlink (config and src stay as they are)
+  dotsync unlink
+
+  # remove the symlinks of entries 2 and 5 without asking
+  dotsync unlink --force 2 5
+
+  # remove the symlink and move the backup back into place
+  dotsync unlink --restore 2`,
 	Args:              cobra.ArbitraryArgs,
 	ValidArgsFunction: completeEntryIDsMulti,
 	RunE:              runUnlink,
@@ -27,10 +35,6 @@ func init() {
 	rootCmd.AddCommand(unlinkCmd)
 	unlinkCmd.Flags().BoolVar(&unlinkForce, "force", false, "skip confirmation prompt")
 	unlinkCmd.Flags().BoolVar(&unlinkRestore, "restore", false, "move the backup back into place")
-	flagExample(unlinkCmd.Flags(), "force",
-		"  # remove the symlinks of entries 2 and 5 without asking\n  dotsync unlink --force 2 5")
-	flagExample(unlinkCmd.Flags(), "restore",
-		"  # remove the symlink and move the backup back into place\n  dotsync unlink --restore 2")
 }
 
 func runUnlink(_ *cobra.Command, args []string) error {

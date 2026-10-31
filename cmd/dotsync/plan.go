@@ -14,8 +14,19 @@ import (
 )
 
 var planCmd = &cobra.Command{
-	Use:               "plan [id...]",
-	Short:             "Show what apply would do (dry-run with diffs)",
+	Use:   "plan [id...]",
+	Short: "Show what apply would do (dry-run with diffs)",
+	Example: `  # preview what apply would change, with diffs
+  dotsync plan
+
+  # preview entries 2 and 5 only
+  dotsync plan 2 5
+
+  # also show unchanged entries
+  dotsync plan --verbose
+
+  # print straight to the terminal, e.g. for scripts
+  dotsync plan --no-pager`,
 	Args:              cobra.ArbitraryArgs,
 	ValidArgsFunction: completeEntryIDsMulti,
 	RunE:              runPlan,
@@ -30,10 +41,6 @@ func init() {
 	rootCmd.AddCommand(planCmd)
 	planCmd.Flags().BoolVarP(&planVerbose, "verbose", "v", false, "show unchanged entries")
 	planCmd.Flags().BoolVar(&planNoPager, "no-pager", false, "do not pipe output through a pager")
-	flagExample(planCmd.Flags(), "verbose",
-		"  # also show unchanged entries\n  dotsync plan --verbose")
-	flagExample(planCmd.Flags(), "no-pager",
-		"  # print straight to the terminal, e.g. for scripts\n  dotsync plan --no-pager")
 }
 
 func runPlan(_ *cobra.Command, args []string) error {

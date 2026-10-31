@@ -18,8 +18,19 @@ import (
 var addCmd = &cobra.Command{
 	Use:   "add [src dst]",
 	Short: "Add a dotfile entry",
-	Args:  cobra.RangeArgs(0, 2),
-	RunE:  runAdd,
+	Example: `  # ~/.zshrc exists but is not tracked yet: move it into the repo, then link it back
+  dotsync add --adopt ~/dotfiles/.zshrc ~/.zshrc
+
+  # link into a directory: a trailing / keeps the basename of src
+  dotsync add ~/dotfiles/nvim --dest ~/.config/
+
+  # rare: use $HOME itself as dst without the confirmation (a warning is still printed)
+  dotsync add --force ~/dotfiles/home ~
+
+  # flags instead of positional args (they can be mixed)
+  dotsync add --src ~/dotfiles/.zshrc --dest ~/.zshrc`,
+	Args: cobra.RangeArgs(0, 2),
+	RunE: runAdd,
 }
 
 var addSrc, addDest string
@@ -31,14 +42,6 @@ func init() {
 	addCmd.Flags().StringVar(&addDest, "dest", "", "destination path in home directory")
 	addCmd.Flags().BoolVar(&addAdopt, "adopt", false, "move the existing dst into src, then link dst to it")
 	addCmd.Flags().BoolVar(&addForce, "force", false, "skip safety confirmations (a warning is still printed)")
-	flagExample(addCmd.Flags(), "src",
-		"  # flags instead of positional args (they can be mixed)\n  dotsync add --src ~/dotfiles/.zshrc --dest ~/.zshrc")
-	flagExample(addCmd.Flags(), "dest",
-		"  # link into a directory: a trailing / keeps the basename of src\n  dotsync add ~/dotfiles/nvim --dest ~/.config/")
-	flagExample(addCmd.Flags(), "adopt",
-		"  # ~/.zshrc exists but is not tracked yet: move it into the repo, then link it back\n  dotsync add --adopt ~/dotfiles/.zshrc ~/.zshrc")
-	flagExample(addCmd.Flags(), "force",
-		"  # rare: use $HOME itself as dst without the confirmation (a warning is still printed)\n  dotsync add --force ~/dotfiles/home ~")
 	_ = addCmd.RegisterFlagCompletionFunc("src", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return nil, cobra.ShellCompDirectiveDefault
 	})

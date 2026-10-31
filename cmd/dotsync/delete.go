@@ -15,9 +15,17 @@ import (
 )
 
 var deleteCmd = &cobra.Command{
-	Use:               "delete [<id>]",
-	Aliases:           []string{"del"},
-	Short:             "Delete a dotfile entry and unlink its symlink",
+	Use:     "delete [<id>]",
+	Aliases: []string{"del"},
+	Short:   "Delete a dotfile entry and unlink its symlink",
+	Example: `  # pick the entry to delete from a list
+  dotsync delete
+
+  # delete entry 3 and remove its symlink (src is never touched)
+  dotsync delete 3
+
+  # delete entry 3 without the confirmation prompt
+  dotsync delete --force 3`,
 	Args:              cobra.MaximumNArgs(1),
 	ValidArgsFunction: completeEntryIDs,
 	RunE:              runDelete,
@@ -28,8 +36,6 @@ var deleteForce bool
 func init() {
 	rootCmd.AddCommand(deleteCmd)
 	deleteCmd.Flags().BoolVar(&deleteForce, "force", false, "skip confirmation prompt")
-	flagExample(deleteCmd.Flags(), "force",
-		"  # delete entry 3 without the confirmation prompt\n  dotsync delete --force 3")
 }
 
 func runDelete(_ *cobra.Command, args []string) error {

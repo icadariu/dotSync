@@ -5,11 +5,9 @@ import (
 	"os"
 	"slices"
 	"strconv"
-	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/icadariu/dotSync/internal/config"
 	"github.com/icadariu/dotSync/internal/diff"
@@ -59,33 +57,32 @@ func rootGuard(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-const exampleAnnotation = "dotsync_example"
+// builtinExamples covers the subcommands cobra creates itself inside Execute.
+var builtinExamples = map[string]string{
+	"completion": `  # write the zsh script to a directory on fpath (before compinit)
+  dotsync completion zsh > ~/.zsh/completions/_dotsync
 
-// flagExample attaches help examples to a flag; --help shows them, filtered to the flags passed.
-func flagExample(fs *pflag.FlagSet, name string, ex ...string) {
-	_ = fs.SetAnnotation(name, exampleAnnotation, ex)
+  # same for bash
+  dotsync completion bash > ~/.local/share/bash-completion/completions/dotsync`,
+	"help": `  # same as dotsync add --help
+  dotsync help add`,
 }
 
 func init() {
 	defaultHelp := rootCmd.HelpFunc()
+	// Examples print last, after Global Flags, instead of cobra's spot above Flags.
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		var all, picked []string
-		cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
-			ex := f.Annotations[exampleAnnotation]
-			all = append(all, ex...)
-			if f.Changed {
-				picked = append(picked, ex...)
-			}
-		})
-		if len(picked) == 0 {
-			picked = all
+		ex := cmd.Example
+		if ex == "" && cmd.Parent() == rootCmd {
+			ex = builtinExamples[cmd.Name()]
 		}
 		base := cmd.Example
-		if len(picked) > 0 {
-			cmd.Example = strings.Join(picked, "\n\n")
-		}
+		cmd.Example = ""
 		defaultHelp(cmd, args)
 		cmd.Example = base
+		if ex != "" {
+			fmt.Fprintf(cmd.OutOrStdout(), "\nExamples:\n%s\n", ex)
+		}
 	})
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "", "config file path (default ~/.dotsync.yaml, env: DOTSYNC_CONFIG)")
 }
@@ -145,8 +142,7 @@ func main() {
 }
 
 // handleHelpFlag serves --help/-h before cobra parses flags, so a value-taking
-// flag right before it (add --src --help) cannot swallow it as its value. Every
-// flag named in args is marked Changed, which the help func uses to pick examples.
+// flag right before it (add --src --help) cannot swallow it as its value.
 func handleHelpFlag(args []string) bool {
 	if i := slices.Index(args, "--"); i >= 0 {
 		args = args[:i]
@@ -154,25 +150,12 @@ func handleHelpFlag(args []string) bool {
 	if !slices.Contains(args, "--help") && !slices.Contains(args, "-h") {
 		return false
 	}
+	// Execute normally adds these; Find needs them now (both calls are idempotent).
+	rootCmd.InitDefaultHelpCmd()
+	rootCmd.InitDefaultCompletionCmd()
 	cmd, _, err := rootCmd.Find(args)
 	if err != nil {
 		cmd = rootCmd
-	}
-	fs := cmd.Flags()
-	for _, a := range args {
-		switch {
-		case strings.HasPrefix(a, "--"):
-			name, _, _ := strings.Cut(a[2:], "=")
-			if f := fs.Lookup(name); f != nil {
-				f.Changed = true
-			}
-		case strings.HasPrefix(a, "-") && len(a) > 1:
-			for _, c := range a[1:] {
-				if f := fs.ShorthandLookup(string(c)); f != nil {
-					f.Changed = true
-				}
-			}
-		}
 	}
 	_ = cmd.Help()
 	return true
