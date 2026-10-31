@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"syscall"
 
@@ -56,7 +57,33 @@ func rootGuard(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
+// builtinExamples covers the subcommands cobra creates itself inside Execute.
+var builtinExamples = map[string]string{
+	"completion": `  # write the zsh script to a directory on fpath (before compinit)
+  dotsync completion zsh > ~/.zsh/completions/_dotsync
+
+  # same for bash
+  dotsync completion bash > ~/.local/share/bash-completion/completions/dotsync`,
+	"help": `  # same as dotsync add --help
+  dotsync help add`,
+}
+
 func init() {
+	defaultHelp := rootCmd.HelpFunc()
+	// Examples print last, after Global Flags, instead of cobra's spot above Flags.
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		ex := cmd.Example
+		if ex == "" && cmd.Parent() == rootCmd {
+			ex = builtinExamples[cmd.Name()]
+		}
+		base := cmd.Example
+		cmd.Example = ""
+		defaultHelp(cmd, args)
+		cmd.Example = base
+		if ex != "" {
+			fmt.Fprintf(cmd.OutOrStdout(), "\nExamples:\n%s\n", ex)
+		}
+	})
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "", "config file path (default ~/.dotsync.yaml, env: DOTSYNC_CONFIG)")
 }
 
@@ -105,13 +132,33 @@ func selectEntries(entries []config.Entry, args []string) ([]config.Entry, error
 }
 
 func main() {
-	if HandleVersionFlag() {
+	if HandleVersionFlag() || handleHelpFlag(os.Args[1:]) {
 		return
 	}
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, errorLine(err))
 		os.Exit(1)
 	}
+}
+
+// handleHelpFlag serves --help/-h before cobra parses flags, so a value-taking
+// flag right before it (add --src --help) cannot swallow it as its value.
+func handleHelpFlag(args []string) bool {
+	if i := slices.Index(args, "--"); i >= 0 {
+		args = args[:i]
+	}
+	if !slices.Contains(args, "--help") && !slices.Contains(args, "-h") {
+		return false
+	}
+	// Execute normally adds these; Find needs them now (both calls are idempotent).
+	rootCmd.InitDefaultHelpCmd()
+	rootCmd.InitDefaultCompletionCmd()
+	cmd, _, err := rootCmd.Find(args)
+	if err != nil {
+		cmd = rootCmd
+	}
+	_ = cmd.Help()
+	return true
 }
 
 // errorLine is how main prints a failed command; errors embed config paths,

@@ -14,6 +14,8 @@ import (
 var sortCmd = &cobra.Command{
 	Use:   "sort",
 	Short: "Sort entries by src path and renumber IDs",
+	Example: `  # sort entries by src path and renumber ids 1..N
+  dotsync sort`,
 	Long: "Sort .dotsync.yaml entries by their src path (ascending, case-sensitive)\n" +
 		"and renumber IDs sequentially from 1. Useful after manually editing the\n" +
 		"config to leave a clean, predictable layout. If nothing would change,\n" +

@@ -15,7 +15,12 @@ var listCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"ls"},
 	Short:   "List all dotfile entries",
-	RunE:    runList,
+	Example: `  # show every entry with its id
+  dotsync list
+
+  # same, using the short alias
+  dotsync ls`,
+	RunE: runList,
 }
 
 func init() {

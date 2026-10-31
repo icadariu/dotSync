@@ -2780,3 +2780,93 @@ func TestE2E_Apply_ConflictBackupAppearsDuringPrompt(t *testing.T) {
 		t.Errorf("stderr should tell the user to re-run apply, got: %q", stderr)
 	}
 }
+
+var addExamples = []string{"dotsync add --adopt", "dotsync add ~/dotfiles/nvim --dest", "dotsync add --force", "dotsync add --src"}
+
+// checkHelp asserts out contains every want string, none of notWant, and,
+// when it has an Examples section, that the section comes after Global Flags.
+func checkHelp(t *testing.T, args []string, out string, want, notWant []string) {
+	t.Helper()
+	for _, w := range want {
+		if !strings.Contains(out, w) {
+			t.Errorf("%v: missing %q in:\n%s", args, w, out)
+		}
+	}
+	for _, nw := range notWant {
+		if strings.Contains(out, nw) {
+			t.Errorf("%v: unexpected %q in:\n%s", args, nw, out)
+		}
+	}
+	if ex := strings.Index(out, "Examples:"); ex >= 0 && ex < strings.Index(out, "Global Flags:") {
+		t.Errorf("%v: Examples must come after Global Flags:\n%s", args, out)
+	}
+}
+
+// TestE2E_HelpExamples verifies that --help shows the command's full set of
+// examples, whatever flags are passed, at the end after Global Flags; every
+// subcommand has some (issue #4).
+func TestE2E_HelpExamples(t *testing.T) {
+	cases := []struct {
+		name    string
+		args    []string
+		want    []string
+		notWant []string
+	}{
+		{"add", []string{"add", "--help"}, append([]string{"Examples:"}, addExamples...), nil},
+		{"add with a flag", []string{"add", "--adopt", "--help"}, append([]string{"Examples:"}, addExamples...), nil},
+		{"apply", []string{"apply", "--no-backup", "--help"}, []string{"dotsync apply --force", "dotsync apply --no-backup"}, nil},
+		{"plan", []string{"plan", "--help"}, []string{"dotsync plan --verbose", "dotsync plan --no-pager"}, nil},
+		{"unlink", []string{"unlink", "--help"}, []string{"dotsync unlink --force", "dotsync unlink --restore"}, nil},
+		{"delete", []string{"delete", "--help"}, []string{"dotsync delete --force"}, nil},
+		{"edit", []string{"edit", "--help"}, []string{"dotsync edit 3"}, nil},
+		{"list", []string{"list", "--help"}, []string{"Examples:", "dotsync ls"}, nil},
+		{"sort", []string{"sort", "--help"}, []string{"Examples:", "dotsync sort"}, nil},
+		{"completion", []string{"completion", "--help"}, []string{"dotsync completion zsh"}, nil},
+		{"help", []string{"help", "--help"}, []string{"dotsync help add"}, nil},
+		{"help subcommand shows add examples", []string{"help", "add"}, addExamples, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testenv.New(t)
+			out := captureStdout(func() {
+				rootCmd.SetArgs(tc.args)
+				if err := rootCmd.Execute(); err != nil {
+					t.Fatalf("%v: %v", tc.args, err)
+				}
+			})
+			checkHelp(t, tc.args, out, tc.want, tc.notWant)
+		})
+	}
+}
+
+// TestHandleHelpFlag verifies that --help/-h works after any flag, including a
+// value-taking one that would otherwise swallow it (issue #4).
+func TestHandleHelpFlag(t *testing.T) {
+	cases := []struct {
+		name    string
+		args    []string
+		handled bool
+		want    []string
+		notWant []string
+	}{
+		{"value flag swallows help", []string{"add", "--src", "--help"}, true, addExamples, nil},
+		{"short -h as value", []string{"add", "--src", "x", "--dest", "-h"}, true, addExamples, nil},
+		{"shorthand flag", []string{"plan", "-v", "--help"}, true, []string{"dotsync plan --verbose", "dotsync plan --no-pager"}, nil},
+		{"completion before Execute", []string{"completion", "--help"}, true, []string{"dotsync completion zsh"}, nil},
+		{"help before Execute", []string{"help", "-h"}, true, []string{"dotsync help add"}, nil},
+		{"root help has no examples", []string{"--help"}, true, []string{"Usage:", "Available Commands:"}, []string{"Examples:"}},
+		{"help after -- is an argument", []string{"add", "--", "--help"}, false, nil, nil},
+		{"no help", []string{"add", "a", "b"}, false, nil, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testenv.New(t)
+			var handled bool
+			out := captureStdout(func() { handled = handleHelpFlag(tc.args) })
+			if handled != tc.handled {
+				t.Fatalf("%v: handled = %v, want %v", tc.args, handled, tc.handled)
+			}
+			checkHelp(t, tc.args, out, tc.want, tc.notWant)
+		})
+	}
+}

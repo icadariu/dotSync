@@ -8,8 +8,19 @@ import (
 )
 
 var applyCmd = &cobra.Command{
-	Use:               "apply [id...]",
-	Short:             "Apply dotfile symlinks",
+	Use:   "apply [id...]",
+	Short: "Apply dotfile symlinks",
+	Example: `  # link every entry, asking before a conflicting dst is moved to a backup
+  dotsync apply
+
+  # apply only entries 2 and 5
+  dotsync apply 2 5
+
+  # apply every entry without per-entry prompts
+  dotsync apply --force
+
+  # delete a conflicting dst instead of renaming it to <dst><backup_suffix>
+  dotsync apply --no-backup 3`,
 	Args:              cobra.ArbitraryArgs,
 	ValidArgsFunction: completeEntryIDsMulti,
 	RunE:              runApply,

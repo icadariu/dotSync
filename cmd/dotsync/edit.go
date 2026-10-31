@@ -12,8 +12,13 @@ import (
 )
 
 var editCmd = &cobra.Command{
-	Use:               "edit <id>",
-	Short:             "Edit a dotfile entry in $EDITOR",
+	Use:   "edit <id>",
+	Short: "Edit a dotfile entry in $EDITOR",
+	Example: `  # edit entry 3 in $EDITOR (vi if unset)
+  dotsync edit 3
+
+  # use another editor for one run
+  EDITOR=nano dotsync edit 3`,
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: completeEntryIDs,
 	RunE:              runEdit,

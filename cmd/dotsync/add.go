@@ -18,8 +18,19 @@ import (
 var addCmd = &cobra.Command{
 	Use:   "add [src dst]",
 	Short: "Add a dotfile entry",
-	Args:  cobra.RangeArgs(0, 2),
-	RunE:  runAdd,
+	Example: `  # ~/.zshrc exists but is not tracked yet: move it into the repo, then link it back
+  dotsync add --adopt ~/dotfiles/.zshrc ~/.zshrc
+
+  # link into a directory: a trailing / keeps the basename of src
+  dotsync add ~/dotfiles/nvim --dest ~/.config/
+
+  # rare: use $HOME itself as dst without the confirmation (a warning is still printed)
+  dotsync add --force ~/dotfiles/home ~
+
+  # flags instead of positional args (they can be mixed)
+  dotsync add --src ~/dotfiles/.zshrc --dest ~/.zshrc`,
+	Args: cobra.RangeArgs(0, 2),
+	RunE: runAdd,
 }
 
 var addSrc, addDest string
