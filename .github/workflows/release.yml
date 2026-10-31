@@ -63,7 +63,8 @@ jobs:
         if: github.event_name == 'push' || !inputs.dry_run
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
-          go-version-file: go.mod
+          # Latest stable Go, so stdlib security fixes arrive without bumping go.mod.
+          go-version: 'stable'
 
       - name: Test
         if: github.event_name == 'push' || !inputs.dry_run
