@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Canonical next-version calculator. Copy verbatim to .github/next-version.sh.
+# Managed by github-utils templates from ai-setup (config/claude/user_scripts/go_release_template); edit it there.
 # Prints the next SemVer tag from the Conventional Commits since the last v*
 # tag: breaking (`type!:` or a BREAKING CHANGE footer) -> major, feat -> minor,
 # anything else -> patch; while the major is 0, breaking -> minor.

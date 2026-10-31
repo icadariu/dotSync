@@ -1,3 +1,6 @@
+# Managed by github-utils templates from ai-setup (config/claude/user_scripts/go_release_template).
+# Edit it there, not in this repo. The job name "vet and test" is the required
+# status check on the default branch (github-harden.py --required-checks), keep it stable.
 name: ci
 
 on:
@@ -44,6 +47,8 @@ jobs:
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
       - name: Release config check
+        # Repos that don't release have no .goreleaser.yaml.
+        if: hashFiles('.goreleaser.yaml') != ''
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de  # v7.3.0
         with:
           distribution: goreleaser

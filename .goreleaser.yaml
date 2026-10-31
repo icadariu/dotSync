@@ -1,7 +1,7 @@
-# Canonical GoReleaser config. Copy verbatim to the repo root as .goreleaser.yaml
-# and change only the two lines marked ADJUST. Pair with release.yml (CI) and
-# the release target in Makefile.fragment. Version injection matches
-# go_version_template: --version prints "<tag> (built DD-Mon-YYYY_HH:MM, commit <sha>)".
+# Managed by github-utils templates from ai-setup (config/claude/user_scripts/go_release_template).
+# Edit it there, not in this repo; lines marked ADJUST keep this repo's own
+# value when synced. Version injection matches go_version_template: --version
+# prints "<tag> (built DD-Mon-YYYY_HH:MM, commit <sha>)".
 version: 2
 
 project_name: dotsync

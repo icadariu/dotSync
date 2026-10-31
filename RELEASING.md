@@ -1,5 +1,7 @@
 # Releasing
 
+<!-- Managed by github-utils templates from ai-setup (config/claude/user_scripts/go_release_template); edit it there, not in this repo. -->
+
 A release is a `vX.Y.Z` tag on `main`. Every PR merged since the previous tag
 goes into that one release. The `release` workflow builds the binaries with
 GoReleaser and publishes the GitHub release: linux and darwin archives for
