@@ -54,8 +54,5 @@ jobs:
       - name: Release config check
         # Repos that don't release have no .goreleaser.yaml.
         if: hashFiles('.goreleaser.yaml') != ''
-        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de  # v7.3.0
-        with:
-          distribution: goreleaser
-          version: '~> v2'
-          args: check
+        # Exact version from tools/go.mod, the same one release.yml publishes with.
+        run: go run github.com/goreleaser/goreleaser/v2@v2.19.0 check
