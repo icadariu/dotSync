@@ -258,3 +258,9 @@ prefer to install it by hand.
 `delete <id>` and `edit <id>` complete an entry ID from your config, and
 `plan`/`apply` complete any number of IDs (skipping ones already typed), with
 `src -> dst` shown alongside each suggestion.
+
+## License
+
+Apache License 2.0 with the Commons Clause ([LICENSE](LICENSE)): you may use, change and share dotSync,
+but not sell it, nor a product or service (hosting included) whose value derives entirely or
+substantially from it. Releases up to v0.1.2 remain available under the MIT License.
