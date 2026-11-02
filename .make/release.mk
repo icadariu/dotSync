@@ -1,4 +1,4 @@
-# Managed by github-utils templates from ai-setup (config/claude/user_scripts/go_release_template).
+# Managed by github-utils templates; edit the shared template, not this file.
 # Edit it there, not in this repo: 'github-utils templates --apply' overwrites local edits.
 #
 # Signed-tag release from a terminal; pairs with .github/workflows/release.yml

@@ -1,6 +1,6 @@
 # Releasing
 
-<!-- Managed by github-utils templates from ai-setup (config/claude/user_scripts/go_release_template); edit it there, not in this repo. -->
+<!-- Managed by github-utils templates; edit the shared template, not this file. -->
 
 A release is a `vX.Y.Z` tag on `main`. Every PR merged since the previous tag
 goes into that one release. The `release` workflow builds the binaries with

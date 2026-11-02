@@ -1,4 +1,4 @@
-# Managed by github-utils templates from ai-setup (config/claude/user_scripts/go_release_template).
+# Managed by github-utils templates; edit the shared template, not this file.
 # Edit it there, not in this repo. Two ways in:
 # - a pushed signed v* tag (`make release`);
 # - Actions -> release -> Run workflow on main: computes the next version from
