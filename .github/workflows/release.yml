@@ -84,7 +84,7 @@ jobs:
         # Exact version, not a '~> v2' float: this step holds contents/id-token/attestations
         # write, so a newly published goreleaser must not run here unreviewed. The version
         # comes from tools/go.mod (Dependabot); go run verifies it against the checksum DB.
-        run: go run github.com/goreleaser/goreleaser/v2@v2.19.0 release --clean
+        run: go run github.com/goreleaser/goreleaser/v2@v2.20.2 release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
