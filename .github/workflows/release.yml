@@ -65,6 +65,9 @@ jobs:
         with:
           # Latest stable Go, so stdlib security fixes arrive without bumping go.mod.
           go-version: 'stable'
+          # A restored cache is not re-verified against the checksum DB and is written by
+          # ci.yml runs on main; this job holds write permissions, so build from scratch.
+          cache: false
 
       - name: Test
         if: github.event_name == 'push' || !inputs.dry_run
